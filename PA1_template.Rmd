@@ -1,25 +1,76 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+author: "Marian Drumea"
+date: "October 16, 2016"
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.path = "figure/")
+```
 
 ## Loading and preprocessing the data
-
-
+```{r}
+mydata <- read.csv("activity.csv")
+myCleanData <- mydata
+myCleanData[is.na(mydata$steps), 1] <- 0
+sums <- aggregate(myCleanData[ ,1], list(date = myCleanData$date), sum)
+```
 
 ## What is mean total number of steps taken per day?
+### 1. Histogram of the total number of steps taken each day
+```{r}
+barplot(sums$x, names.arg = paste(substr(sums$date, 9, 10), "\n", substr(sums$date, 6, 7)), main = "Number of steps per day", xlab = "Date (DD/MM, all dates in 2012)", ylab = "Number of steps", cex.names = 0.75)
+```
 
-
+### 2. Mean/median total number of steps taken per day
+```{r}
+mean(sums$x)
+median(sums$x)
+```
 
 ## What is the average daily activity pattern?
+### 1. Time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+```{r}
+sumsInterval <- aggregate(myCleanData[ ,1], list(interval = myCleanData$interval), mean)
+plot(sumsInterval$interval, sumsInterval$x, type = "l", names(sumsInterval$interval), main = "Average Number of Steps Across All Days, by Interval", xlab = "Interval", ylab = "Number of Steps") #to finish
+```
 
-
+### 2. 5-minute interval containing the maximum number of steps - 8:35 - 8:40
+```{r}
+sumsInterval[sumsInterval$x == max(sumsInterval$x), 1]
+```
 
 ## Imputing missing values
+### 1. Total number of missing values in the dataset
+```{r}
+sum(is.na(mydata$steps))
+```
 
+### 2 - 3. Imputing strategy used - replacing missing values with the overall mean for the interval 
+```{r}
+for (index in which(is.na(mydata$steps)))  {
+  mydata[index, 1] <- sumsInterval[sumsInterval$interval == mydata[index, 3], 2]
+}
+```
 
+### 4.1. Histogram for imputed dataset 
+```{r}
+sumsImputed <- aggregate(mydata[ ,1], list(date = mydata$date), sum)
+barplot(sumsImputed$x, names.arg = paste(substr(sumsImputed$date, 9, 10), "\n", substr(sumsImputed$date, 6, 7)), main = "Number of Steps per Day", xlab = "Date (DD/MM, all dates in 2012)", ylab = "Number of Steps", cex.names = 0.75)
+```
+
+### 4.2. Mean/median total number of steps taken per day for imputed dataset
+```{r}
+mean(sumsImputed$x)
+median(sumsImputed$x)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+mydata$weekday <- sapply(mydata$date, function(x) ifelse(weekdays(as.Date(x), abbreviate = TRUE) %in% c("Sat", "Sun"), "weekend", "weekday"))
+sumsWeekday <- aggregate(mydata[ ,1], list(interval = mydata$interval, weekday = mydata$weekday), mean)
+par(mfrow=c(2,1))
+plot(as.numeric(sumsWeekday[sumsWeekday$weekday == "weekday", ]$interval), sumsWeekday[sumsWeekday$weekday == "weekday", ]$x, type = "l", main = "Number of Steps per Day During Weekdays", xlab = "Interval", ylab = "Number of Steps")
+plot(as.numeric(sumsWeekday[sumsWeekday$weekday != "weekday", ]$interval), sumsWeekday[sumsWeekday$weekday != "weekday", ]$x, type = "l", main = "Number of Steps per Day During Weekends", xlab = "Interval", ylab = "Number of Steps")
+```
